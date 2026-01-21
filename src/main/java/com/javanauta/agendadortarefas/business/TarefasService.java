@@ -1,7 +1,7 @@
 package com.javanauta.agendadortarefas.business;
 
 
-import com.javanauta.agendadortarefas.business.dto.TarefasDTO;
+import com.javanauta.agendadortarefas.business.dto.TarefasDTORecord;
 import com.javanauta.agendadortarefas.business.mapper.TarefaUpdateConverter;
 import com.javanauta.agendadortarefas.business.mapper.TarefasConverter;
 import com.javanauta.agendadortarefas.infrastructure.entity.TarefasEntity;
@@ -25,29 +25,29 @@ public class TarefasService {
     private final JwtUtil jwtUtil;
     private final TarefaUpdateConverter tarefaUpdateConverter;
 
-    public TarefasDTO gravarTarefa(String token, TarefasDTO dto) {
+    public TarefasDTORecord gravarTarefa(String token, TarefasDTORecord dto) {
 
         String email = jwtUtil.extrairEmailToken(token.substring(7));
-        dto.setDataCriacao(LocalDateTime.now());
-        dto.setStatusNotificacaoEnum(StatusNotificacaoEnum.PENDENTE);
-        dto.setEmailUsuario(email);
-        TarefasEntity entity = tarefasConverter.paraTarefaEntity(dto);
+        TarefasDTORecord dtoFinal = new TarefasDTORecord(null ,dto.nometarefa(), dto.descricao(), LocalDateTime.now(),
+                dto.dataEvento(),email,null, StatusNotificacaoEnum.PENDENTE);
 
-        return tarefasConverter.paraTarefasDTO(
+        TarefasEntity entity = tarefasConverter.paraTarefaEntity(dtoFinal);
+
+        return tarefasConverter.paraTarefasDTORecord(
                 tarefasRepository.save(entity));
     }
 
-    public List<TarefasDTO> buscaTarefasAgendadasPorPeriodo(LocalDateTime dataInicial, LocalDateTime dataFinal) {
-        return tarefasConverter.paraListaTarefasDTO(
-                tarefasRepository.findByDataEventoBetween(dataInicial, dataFinal));
+    public List<TarefasDTORecord> buscaTarefasAgendadasPorPeriodo(LocalDateTime dataInicial, LocalDateTime dataFinal) {
+        return tarefasConverter.paraListaTarefasDTORecord(
+                tarefasRepository.findByDataEventoBetweenAndStatusNotificacaoEnum(dataInicial, dataFinal , StatusNotificacaoEnum.PENDENTE));
     }
 
-    public List<TarefasDTO> buscaTarefasPorEmail(String token) {
+    public List<TarefasDTORecord> buscaTarefasPorEmail(String token) {
 
         String email = jwtUtil.extrairEmailToken(token.substring(7));
         List<TarefasEntity> listaTarefas = tarefasRepository.findByEmailUsuario(email);
 
-        return tarefasConverter.paraListaTarefasDTO(listaTarefas);
+        return tarefasConverter.paraListaTarefasDTORecord(listaTarefas);
     }
 
     public void deletaTarefaPorId(String id) {
@@ -59,25 +59,25 @@ public class TarefasService {
         }
     }
 
-    public TarefasDTO alteraStatus(StatusNotificacaoEnum status, String id) {
+    public TarefasDTORecord alteraStatus(StatusNotificacaoEnum status, String id) {
         try {
             TarefasEntity entity = tarefasRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Tarefa não econtrada " + id));
 
             entity.setStatusNotificacaoEnum(status);
-            return tarefasConverter.paraTarefasDTO(tarefasRepository.save(entity));
+            return tarefasConverter.paraTarefasDTORecord(tarefasRepository.save(entity));
         } catch (ResourceNotFoundException e) {
             throw new ResourceNotFoundException("Erro ao alterar status da tarefa " + e.getCause());
         }
     }
 
-    public TarefasDTO updateTarefas(TarefasDTO dto, String id) {
+    public TarefasDTORecord updateTarefas(TarefasDTORecord dto, String id) {
         try {
             TarefasEntity entity = tarefasRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Tarefa não encontrada " + id));
 
             tarefaUpdateConverter.updateTarefas(dto, entity);
-            return tarefasConverter.paraTarefasDTO(tarefasRepository.save(entity));
+            return tarefasConverter.paraTarefasDTORecord(tarefasRepository.save(entity));
 
         } catch (ResourceNotFoundException e) {
             throw new ResourceNotFoundException("Erro ao alterar status da tarefa " + e.getCause());
